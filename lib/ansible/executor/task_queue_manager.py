@@ -93,6 +93,7 @@ class TaskQueueManager:
 
         # this dictionary is used to keep track of notified handlers
         self._notified_handlers = dict()
+        self._listening_handlers = dict()
 
         # dictionaries to keep track of failed/unreachable hosts
         self._failed_hosts      = dict()
@@ -125,6 +126,8 @@ class TaskQueueManager:
         # Proxied dicts don't support iteritems, so we have to use keys()
         for key in self._notified_handlers.keys():
             del self._notified_handlers[key]
+        for key in self._listening_handlers.keys():
+            del self._listening_handlers[key]
 
         def _process_block(b):
             temp_list = []
@@ -142,6 +145,10 @@ class TaskQueueManager:
         # then initialize it with the handler names from the handler list
         for handler in handler_list:
             self._notified_handlers[handler.get_name()] = []
+            if handler.listen:
+                if handler.listen not in self._listening_handlers:
+                    self._listening_handlers[handler.listen] = []
+                self._listening_handlers[handler.listen].append(handler.get_name())
 
     def load_callbacks(self):
         '''
@@ -226,6 +233,7 @@ class TaskQueueManager:
         self.send_callback('v2_playbook_on_play_start', new_play)
 
         # initialize the shared dictionary containing the notified handlers
+        new_play.handlers = new_play.compile_roles_handlers() + new_play.handlers
         self._initialize_notified_handlers(new_play.handlers)
 
         # load the specified strategy (or the default linear one)

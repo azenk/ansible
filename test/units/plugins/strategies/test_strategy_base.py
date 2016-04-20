@@ -45,12 +45,14 @@ class TestStrategyBase(unittest.TestCase):
         mock_tqm = MagicMock(TaskQueueManager)
         mock_tqm._final_q = MagicMock()
         mock_tqm._options = MagicMock()
+        mock_tqm._listening_handlers = []
         strategy_base = StrategyBase(tqm=mock_tqm)
 
     def test_strategy_base_run(self):
         mock_tqm = MagicMock(TaskQueueManager)
         mock_tqm._final_q = MagicMock()
         mock_tqm._stats = MagicMock()
+        mock_tqm._listening_handlers = []
         mock_tqm.send_callback.return_value = None
 
         mock_iterator  = MagicMock()
