@@ -320,19 +320,60 @@ class StrategyBase:
                     original_host = get_original_host(task_result._host)
                     original_task = iterator.get_original_task(original_host, task_result._task)
 
-                    if handler_name not in self._notified_handlers:
-                        print("%s wasn't in _notified_handlers")
+                    def search_handler_blocks(handler_name, handler_blocks):
+                        for handler_block in handler_blocks:
+                            for handler_task in handler_block.block:
+                                handler_vars = self._variable_manager.get_vars(loader=self._loader, play=iterator._play, task=handler_task)
+                                templar = Templar(loader=self._loader, variables=handler_vars)
+                                try:
+                                    # first we check with the full result of get_name(), which may
+                                    # include the role name (if the handler is from a role). If that
+                                    # is not found, we resort to the simple name field, which doesn't
+                                    # have anything extra added to it.
+                                    target_handler_name = templar.template(handler_task.name)
+                                    if target_handler_name == handler_name:
+                                        return handler_task
+                                    else:
+                                        target_handler_name = templar.template(handler_task.get_name())
+                                        if target_handler_name == handler_name:
+                                            return handler_task
+                                except (UndefinedError, AnsibleUndefinedVariable):
+                                    # We skip this handler due to the fact that it may be using
+                                    # a variable in the name that was conditionally included via
+                                    # set_fact or some other method, and we don't want to error
+                                    # out unnecessarily
+                                    continue
+                        return None
+
+                    # Find the handler using the above helper.  First we look up the
+                    # dependency chain of the current task (if it's from a role), otherwise
+                    # we just look through the list of handlers in the current play/all
+                    # roles and use the first one that matches the notify name
+                    target_handler = None
+                    if original_task._role:
+                        target_handler = search_handler_blocks(handler_name, original_task._role.get_handler_blocks())
+                    if target_handler is None:
+                        target_handler = search_handler_blocks(handler_name, iterator._play.handlers)
+                    if target_handler is None:
                         if handler_name in self._listening_handlers:
-                            for listening_handler in self._listening_handlers[handler_name]:
+                            for listening_handler_name in self._listening_handlers[handler_name]:
+                                listening_handler = None
+                                if original_task._role:
+                                    listening_handler = search_handler_blocks(listening_handler_name, original_task._role.get_handler_blocks())
+                                if listening_handler is None:
+                                    listening_handler = search_handler_blocks(listening_handler_name, iterator._play.handlers)
+                                if listening_handler is None:
+                                    raise AnsibleError("The requested handler listener '%s' was not found in any of the known handlers" % listening_handler_name)
+
                                 if original_host not in self._notified_handlers[listening_handler]:
                                     self._notified_handlers[listening_handler].append(original_host)
-                                    display.vv("NOTIFIED HANDLER %s" % (listening_handler,))
+                                    display.vv("NOTIFIED HANDLER %s" % (listening_handler_name,))
                         else:
-                            self._notified_handlers[handler_name] = [original_host]
-                            display.vv("NOTIFIED HANDLER %s" % (handler_name,))
+                            raise AnsibleError("The requested handler '%s' was found in neither the main handlers list nor the listening handlers list" % handler_name)
                     else:
-                        if original_host not in self._notified_handlers[handler_name]:
-                            self._notified_handlers[handler_name].append(original_host)
+                        if original_host not in self._notified_handlers[target_handler]:
+                            self._notified_handlers[target_handler].append(original_host)
+                            # FIXME: should this be a callback?
                             display.vv("NOTIFIED HANDLER %s" % (handler_name,))
 
                 elif result[0] == 'register_host_var':
@@ -582,25 +623,8 @@ class StrategyBase:
             #        but this may take some work in the iterator and gets tricky when
             #        we consider the ability of meta tasks to flush handlers
             for handler in handler_block.block:
-                handler_vars = self._variable_manager.get_vars(loader=self._loader, play=iterator._play, task=handler)
-                templar = Templar(loader=self._loader, variables=handler_vars)
-                try:
-                    # first we check with the full result of get_name(), which may
-                    # include the role name (if the handler is from a role). If that
-                    # is not found, we resort to the simple name field, which doesn't
-                    # have anything extra added to it.
-                    handler_name = templar.template(handler.name)
-                    if handler_name not in self._notified_handlers:
-                        handler_name = templar.template(handler.get_name())
-                except (UndefinedError, AnsibleUndefinedVariable):
-                    # We skip this handler due to the fact that it may be using
-                    # a variable in the name that was conditionally included via
-                    # set_fact or some other method, and we don't want to error
-                    # out unnecessarily
-                    continue
-
-                if handler_name in self._notified_handlers and len(self._notified_handlers[handler_name]):
-                    result = self._do_handler_run(handler, handler_name, iterator=iterator, play_context=play_context)
+                if handler in self._notified_handlers and len(self._notified_handlers[handler]):
+                    result = self._do_handler_run(handler, handler.get_name(), iterator=iterator, play_context=play_context)
                     if not result:
                         break
         return result
@@ -618,7 +642,7 @@ class StrategyBase:
         handler.name = saved_name
 
         if notified_hosts is None:
-            notified_hosts = self._notified_handlers[handler_name]
+            notified_hosts = self._notified_handlers[handler]
 
         run_once = False
         try:
@@ -681,7 +705,7 @@ class StrategyBase:
                     continue
 
         # wipe the notification list
-        self._notified_handlers[handler_name] = []
+        self._notified_handlers[handler] = []
         display.debug("done running handlers, result is: %s" % result)
         return result
 
