@@ -278,8 +278,7 @@ class GalaxyCLI(CLI):
 
                 for d in dirs:
                     rel_path = os.path.relpath(os.path.join(root, d), role_template)
-                    if rel_path not in template_ignore:
-                        make_role_dir(rel_path)
+                    make_role_dir(rel_path)
 
         display.display("- %s was created successfully" % role_name)
 
