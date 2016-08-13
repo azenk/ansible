@@ -85,6 +85,13 @@ class GalaxyCLI(CLI):
         elif self.action == "init":
             self.parser.set_usage("usage: %prog init [options] role_name")
             self.parser.add_option('-p', '--init-path', dest='init_path', default="./", help='The path in which the skeleton role will be created. The default is the current working directory.')
+            self.parser.add_option('--role-template', default=C.GALAXY_ROLE_TEMPLATE, help='A path to the template role to be used')
+            self.parser.add_option('--author', default=C.GALAXY_AUTHOR, help='The name of the role author')
+            self.parser.add_option('--company', default=C.GALAXY_COMPANY, help='Your company name')
+            self.parser.add_option('--license', default=C.GALAXY_LICENSE, help='The license under which this role will be published')
+            self.parser.add_option('--description', default='your description', help='A description of the new role')
+            self.parser.add_option('--min-ansible-version', default=C.GALAXY_MIN_ANSIBLE_VERSION, help='The minimum ansible version required for the role')
+            self.parser.add_option('--template-ignore', default='.ignore', help='Ignore these files/directories when found in the template')
         elif self.action == "install":
             self.parser.set_usage("usage: %prog install [options] [-r FILE | role_name(s)[,version] | scm+role_repo_url[,version] | tar_file(s)]")
             self.parser.add_option('-i', '--ignore-errors', dest='ignore_errors', action='store_true', default=False, help='Ignore errors and continue with the next specified role.')
@@ -174,6 +181,13 @@ class GalaxyCLI(CLI):
         init_path  = self.get_opt('init_path', './')
         force      = self.get_opt('force', False)
         offline    = self.get_opt('offline', False)
+        author = self.get_opt('author')
+        company = self.get_opt('company')
+        role_license = self.get_opt('license')
+        role_template = self.get_opt('role_template')
+        description = self.get_opt('description')
+        min_ansible_version = self.get_opt('min_ansible_version')
+        template_ignore = [self.get_opt('template_ignore'), '.git']
 
         role_name = self.args.pop(0).strip() if self.args else None
         if not role_name:
@@ -188,79 +202,85 @@ class GalaxyCLI(CLI):
                             "however it will reset any main.yml files that may have\n"
                             "been modified there already." % role_path)
 
-        # create default README.md
-        if not os.path.exists(role_path):
-            os.makedirs(role_path)
-        readme_path = os.path.join(role_path, "README.md")
-        f = open(readme_path, "wb")
-        f.write(to_bytes(self.galaxy.default_readme))
-        f.close()
+        platforms = []
+        if not offline:
+            platforms = self.api.get_list("platforms") or []
 
-        # create default .travis.yml
-        travis = Environment().from_string(self.galaxy.default_travis).render()
-        f = open(os.path.join(role_path, '.travis.yml'), 'w')
-        f.write(travis)
-        f.close()
+        # group the list of platforms from the api based
+        # on their names, with the release field being
+        # appended to a list of versions
+        platform_groups = defaultdict(list)
+        for platform in platforms:
+            platform_groups[platform['name']].append(platform['release'])
+            platform_groups[platform['name']].sort()
 
-        for dir in GalaxyRole.ROLE_DIRS:
-            dir_path = os.path.join(init_path, role_name, dir)
-            main_yml_path = os.path.join(dir_path, 'main.yml')
+        inject_data = dict(
+            author=author,
+            role_name=role_name,
+            description=description,
+            company=company,
+            license=role_license,
+            issue_tracker_url='http://example.com/issue/tracker',
+            min_ansible_version=min_ansible_version,
+            platforms=platform_groups,
+        )
 
-            # create the directory if it doesn't exist already
+        def get_file_contents(file_path):
+            with open(file_path, 'r') as t:
+                contents = t.read()
+            return contents
+
+        def render_template(template_string):
+            return Environment().from_string(template_string).render(inject_data)
+
+        def write_role_file_contents(relative_file_path, contents):
+            with open(os.path.join(role_path, relative_file_path), 'w') as f:
+                f.write(contents)
+
+        def make_role_dir(relative_path):
+            dir_path = os.path.join(init_path, role_name, relative_path)
             if not os.path.exists(dir_path):
                 os.makedirs(dir_path)
 
-            # now create the main.yml file for that directory
-            if dir == "meta":
-                # create a skeleton meta/main.yml with a valid galaxy_info
-                # datastructure in place, plus with all of the available
-                # platforms included (but commented out), the galaxy_tags
-                # list, and the dependencies section
-                platforms = []
-                if not offline:
-                    platforms = self.api.get_list("platforms") or []
+        # create role directory
+        if not os.path.exists(role_path):
+            os.makedirs(role_path)
 
-                # group the list of platforms from the api based
-                # on their names, with the release field being
-                # appended to a list of versions
-                platform_groups = defaultdict(list)
-                for platform in platforms:
-                    platform_groups[platform['name']].append(platform['release'])
-                    platform_groups[platform['name']].sort()
+        if role_template is None:
+            role_dirs = GalaxyRole.ROLE_DIRS
+            for d in role_dirs:
+                make_role_dir(d)
 
-                inject = dict(
-                    author = 'your name',
-                    description = 'your description',
-                    company = 'your company (optional)',
-                    license = 'license (GPLv2, CC-BY, etc)',
-                    issue_tracker_url = 'http://example.com/issue/tracker',
-                    min_ansible_version = '1.2',
-                    platforms = platform_groups,
-                )
-                rendered_meta = Environment().from_string(self.galaxy.default_meta).render(inject)
-                f = open(main_yml_path, 'w')
-                f.write(rendered_meta)
-                f.close()
-                pass
-            elif dir == "tests":
-                # create tests/test.yml
-                inject = dict(
-                    role_name = role_name
-                )
-                playbook = Environment().from_string(self.galaxy.default_test).render(inject)
-                f = open(os.path.join(dir_path, 'test.yml'), 'w')
-                f.write(playbook)
-                f.close()
+            write_role_file_contents("README.md", self.galaxy.default_readme)
+            write_role_file_contents(".travis.yml", render_template(self.galaxy.default_travis))
+            write_role_file_contents("inventory", 'localhost')
+            write_role_file_contents(os.path.join("meta", "main.yml"), render_template(self.galaxy.default_meta))
+            write_role_file_contents(os.path.join("tests", "test.yml"), render_template(self.galaxy.default_meta))
+            for d in set(role_dirs) - set(['meta', 'tests', 'files', 'templates']):
+                write_role_file_contents(os.path.join(d, "main.yml"), '---\n# %s file for %s\n' % (d, role_name))
+        else:
+            role_template = os.path.expanduser(role_template)
+            # walk through template_path and add files/dirs
+            for root, dirs, files in os.walk(role_template, topdown=True):
+                dirs[:] = filter(lambda d: d not in template_ignore, dirs)
 
-                # create tests/inventory
-                f = open(os.path.join(dir_path, 'inventory'), 'w')
-                f.write('localhost')
-                f.close()
-            elif dir not in ('files','templates'):
-                # just write a (mostly) empty YAML file for main.yml
-                f = open(main_yml_path, 'w')
-                f.write('---\n# %s file for %s\n' % (dir,role_name))
-                f.close()
+                for f in files:
+                    filename, ext = os.path.splitext(f)
+
+                    if filename in template_ignore:
+                        continue
+                    elif ext == ".j2":
+                        f_rel_path = os.path.relpath(os.path.join(root, filename), role_template)
+                        write_role_file_contents(f_rel_path, render_template(get_file_contents(os.path.join(root, f))))
+                    else:
+                        f_rel_path = os.path.relpath(os.path.join(root, f), role_template)
+                        write_role_file_contents(f_rel_path, get_file_contents(os.path.join(root, f)))
+
+                for d in dirs:
+                    rel_path = os.path.relpath(os.path.join(root, d), role_template)
+                    if rel_path not in template_ignore:
+                        make_role_dir(rel_path)
+
         display.display("- %s was created successfully" % role_name)
 
     def execute_info(self):
