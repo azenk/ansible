@@ -254,7 +254,7 @@ class GalaxyCLI(CLI):
             write_role_file_contents(".travis.yml", render_template(self.galaxy.default_travis))
             write_role_file_contents("inventory", 'localhost')
             write_role_file_contents(os.path.join("meta", "main.yml"), render_template(self.galaxy.default_meta))
-            write_role_file_contents(os.path.join("tests", "test.yml"), render_template(self.galaxy.default_meta))
+            write_role_file_contents(os.path.join("tests", "test.yml"), render_template(self.galaxy.default_test))
             for d in set(role_dirs) - set(['meta', 'tests', 'files', 'templates']):
                 write_role_file_contents(os.path.join(d, "main.yml"), '---\n# %s file for %s\n' % (d, role_name))
         else:
