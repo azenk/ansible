@@ -26,6 +26,7 @@ import os.path
 import sys
 import yaml
 import time
+import re
 
 from collections import defaultdict
 from jinja2 import Environment
@@ -85,13 +86,6 @@ class GalaxyCLI(CLI):
         elif self.action == "init":
             self.parser.set_usage("usage: %prog init [options] role_name")
             self.parser.add_option('-p', '--init-path', dest='init_path', default="./", help='The path in which the skeleton role will be created. The default is the current working directory.')
-            self.parser.add_option('--role-template', default=C.GALAXY_ROLE_TEMPLATE, help='A path to the template role to be used')
-            self.parser.add_option('--author', default=C.GALAXY_AUTHOR, help='The name of the role author')
-            self.parser.add_option('--company', default=C.GALAXY_COMPANY, help='Your company name')
-            self.parser.add_option('--license', default=C.GALAXY_LICENSE, help='The license under which this role will be published')
-            self.parser.add_option('--description', default='your description', help='A description of the new role')
-            self.parser.add_option('--min-ansible-version', default=C.GALAXY_MIN_ANSIBLE_VERSION, help='The minimum ansible version required for the role')
-            self.parser.add_option('--template-ignore', default='.ignore', help='Ignore these files/directories when found in the template')
         elif self.action == "install":
             self.parser.set_usage("usage: %prog install [options] [-r FILE | role_name(s)[,version] | scm+role_repo_url[,version] | tar_file(s)]")
             self.parser.add_option('-i', '--ignore-errors', dest='ignore_errors', action='store_true', default=False, help='Ignore errors and continue with the next specified role.')
@@ -181,13 +175,6 @@ class GalaxyCLI(CLI):
         init_path  = self.get_opt('init_path', './')
         force      = self.get_opt('force', False)
         offline    = self.get_opt('offline', False)
-        author = self.get_opt('author')
-        company = self.get_opt('company')
-        role_license = self.get_opt('license')
-        role_template = self.get_opt('role_template')
-        description = self.get_opt('description')
-        min_ansible_version = self.get_opt('min_ansible_version')
-        template_ignore = [self.get_opt('template_ignore'), '.git']
 
         role_name = self.args.pop(0).strip() if self.args else None
         if not role_name:
@@ -215,15 +202,25 @@ class GalaxyCLI(CLI):
             platform_groups[platform['name']].sort()
 
         inject_data = dict(
-            author=author,
             role_name=role_name,
-            description=description,
-            company=company,
-            license=role_license,
+            author='your name',
+            description='your description',
+            company='your company (optional)',
+            license='license (GPLv2, CC-BY, etc)',
             issue_tracker_url='http://example.com/issue/tracker',
-            min_ansible_version=min_ansible_version,
+            min_ansible_version='1.2',
             platforms=platform_groups,
         )
+
+        init_vars_file = C.GALAXY_INIT_VARS_FILE
+        if init_vars_file:
+            with open(init_vars_file, 'r') as f:
+                vars_from_file = yaml.safe_load(f)
+            inject_data.update(vars_from_file)
+
+        author = C.GALAXY_AUTHOR
+        if author is not None:
+            inject_data['author'] = author
 
         def get_file_contents(file_path):
             with open(file_path, 'r') as t:
@@ -246,6 +243,8 @@ class GalaxyCLI(CLI):
         if not os.path.exists(role_path):
             os.makedirs(role_path)
 
+        role_template = C.GALAXY_ROLE_TEMPLATE_PATH
+
         if role_template is None:
             role_dirs = GalaxyRole.ROLE_DIRS
             for d in role_dirs:
@@ -260,14 +259,16 @@ class GalaxyCLI(CLI):
                 write_role_file_contents(os.path.join(d, "main.yml"), '---\n# %s file for %s\n' % (d, role_name))
         else:
             role_template = os.path.expanduser(role_template)
+            template_ignore_expressions = C.GALAXY_ROLE_TEMPLATE_IGNORE
+            template_ignore_re = map(lambda x: re.compile(x), template_ignore_expressions)
             # walk through template_path and add files/dirs
             for root, dirs, files in os.walk(role_template, topdown=True):
-                dirs[:] = filter(lambda d: d not in template_ignore, dirs)
+                dirs[:] = filter(lambda d: not any(map(lambda r: r.match(d), template_ignore_re)), dirs)
 
                 for f in files:
                     filename, ext = os.path.splitext(f)
 
-                    if filename in template_ignore:
+                    if any(map(lambda r: r.match(f), template_ignore_re)):
                         continue
                     elif ext == ".j2":
                         f_rel_path = os.path.relpath(os.path.join(root, filename), role_template)
