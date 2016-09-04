@@ -86,6 +86,7 @@ class GalaxyCLI(CLI):
         elif self.action == "init":
             self.parser.set_usage("usage: %prog init [options] role_name")
             self.parser.add_option('-p', '--init-path', dest='init_path', default="./", help='The path in which the skeleton role will be created. The default is the current working directory.')
+            self.parser.add_option('--role-skeleton', dest='role_skeleton', default=None, help='The path to a role skeleton that the new role should be based upon.')
         elif self.action == "install":
             self.parser.set_usage("usage: %prog install [options] [-r FILE | role_name(s)[,version] | scm+role_repo_url[,version] | tar_file(s)]")
             self.parser.add_option('-i', '--ignore-errors', dest='ignore_errors', action='store_true', default=False, help='Ignore errors and continue with the next specified role.')
@@ -175,6 +176,7 @@ class GalaxyCLI(CLI):
         init_path  = self.get_opt('init_path', './')
         force      = self.get_opt('force', False)
         offline    = self.get_opt('offline', False)
+        role_skeleton = self.get_opt('role_skeleton')
 
         role_name = self.args.pop(0).strip() if self.args else None
         if not role_name:
@@ -243,9 +245,10 @@ class GalaxyCLI(CLI):
         if not os.path.exists(role_path):
             os.makedirs(role_path)
 
-        role_template = C.GALAXY_ROLE_TEMPLATE_PATH
+        if role_skeleton is None:
+            role_skeleton = C.GALAXY_ROLE_SKELETON
 
-        if role_template is None:
+        if role_skeleton is None:
             role_dirs = GalaxyRole.ROLE_DIRS
             for d in role_dirs:
                 make_role_dir(d)
@@ -258,27 +261,27 @@ class GalaxyCLI(CLI):
             for d in set(role_dirs) - set(['meta', 'tests', 'files', 'templates']):
                 write_role_file_contents(os.path.join(d, "main.yml"), '---\n# %s file for %s\n' % (d, role_name))
         else:
-            role_template = os.path.expanduser(role_template)
-            template_ignore_expressions = C.GALAXY_ROLE_TEMPLATE_IGNORE
-            template_ignore_re = map(lambda x: re.compile(x), template_ignore_expressions)
+            role_skeleton = os.path.expanduser(role_skeleton)
+            skeleton_ignore_expressions = C.GALAXY_ROLE_SKELETON_IGNORE
+            skeleton_ignore_re = map(lambda x: re.compile(x), skeleton_ignore_expressions)
             # walk through template_path and add files/dirs
-            for root, dirs, files in os.walk(role_template, topdown=True):
-                dirs[:] = filter(lambda d: not any(map(lambda r: r.match(d), template_ignore_re)), dirs)
+            for root, dirs, files in os.walk(role_skeleton, topdown=True):
+                dirs[:] = filter(lambda d: not any(map(lambda r: r.match(d), skeleton_ignore_re)), dirs)
 
                 for f in files:
                     filename, ext = os.path.splitext(f)
 
-                    if any(map(lambda r: r.match(f), template_ignore_re)):
+                    if any(map(lambda r: r.match(f), skeleton_ignore_re)):
                         continue
                     elif ext == ".j2":
-                        f_rel_path = os.path.relpath(os.path.join(root, filename), role_template)
+                        f_rel_path = os.path.relpath(os.path.join(root, filename), role_skeleton)
                         write_role_file_contents(f_rel_path, render_template(get_file_contents(os.path.join(root, f))))
                     else:
-                        f_rel_path = os.path.relpath(os.path.join(root, f), role_template)
+                        f_rel_path = os.path.relpath(os.path.join(root, f), role_skeleton)
                         write_role_file_contents(f_rel_path, get_file_contents(os.path.join(root, f)))
 
                 for d in dirs:
-                    rel_path = os.path.relpath(os.path.join(root, d), role_template)
+                    rel_path = os.path.relpath(os.path.join(root, d), role_skeleton)
                     make_role_dir(rel_path)
 
         display.display("- %s was created successfully" % role_name)
