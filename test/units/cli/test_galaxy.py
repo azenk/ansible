@@ -369,7 +369,7 @@ class TestGalaxyInitSkeleton(unittest.TestCase, ValidRoleTests):
     def test_empty_files_dir(self):
         files_dir = os.path.join(self.role_dir, 'files')
         self.assertTrue(os.path.isdir(files_dir))
-        self.assertEqual(len(os.listdir(files_dir)), 0, msg='we expect the files directory to be empty, is ignore working?')
+        self.assertListEqual(os.listdir(files_dir), [], msg='we expect the files directory to be empty, is ignore working?')
 
     def test_template_ignore_jinja(self):
         test_conf_j2 = os.path.join(self.role_dir, 'templates', 'test.conf.j2')
