@@ -371,11 +371,6 @@ class TestGalaxyInitSkeleton(unittest.TestCase, ValidRoleTests):
         self.assertTrue(os.path.isdir(files_dir))
         self.assertEqual(len(os.listdir(files_dir)), 0, msg='we expect the files directory to be empty, is ignore working?')
 
-    def test_templates_dir(self):
-        templates_dir = os.path.join(self.role_dir, 'templates')
-        self.assertTrue(os.path.isdir(templates_dir))
-        self.assertEqual(len(os.listdir(templates_dir)), 1, msg='we expect the templates directory to contain exactly one file, is ignore working?')
-
     def test_template_ignore_jinja(self):
         test_conf_j2 = os.path.join(self.role_dir, 'templates', 'test.conf.j2')
         self.assertTrue(os.path.exists(test_conf_j2), msg="The test.conf.j2 template doesn't seem to exist, is it being rendered as test.conf?")
@@ -384,6 +379,16 @@ class TestGalaxyInitSkeleton(unittest.TestCase, ValidRoleTests):
         expected_contents = '[defaults]\ntest_key = {{ test_variable }}'
         self.assertEqual(expected_contents, contents, msg="test.conf.j2 doesn't contain what it should, is it being rendered?")
 
+    def test_template_ignore_jinja_subfolder(self):
+        test_conf_j2 = os.path.join(self.role_dir, 'templates', 'subfolder', 'test.conf.j2')
+        self.assertTrue(os.path.exists(test_conf_j2), msg="The test.conf.j2 template doesn't seem to exist, is it being rendered as test.conf?")
+        with open(test_conf_j2, 'r') as f:
+            contents = f.read()
+        expected_contents = '[defaults]\ntest_key = {{ test_variable }}'
+        self.assertEqual(expected_contents, contents, msg="test.conf.j2 doesn't contain what it should, is it being rendered?")
+
+    def test_template_ignore_similar_folder(self):
+        self.assertTrue(os.path.exists(os.path.join(self.role_dir, 'templates_extra', 'templates.txt')))
 
     def test_skeleton_option(self):
         self.assertEquals(self.skeleton_path, self.gc.get_opt('role_skeleton'), msg='Skeleton path was not parsed properly from the command line')
