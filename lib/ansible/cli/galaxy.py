@@ -27,6 +27,7 @@ import sys
 import yaml
 import time
 import re
+import shutil
 
 from collections import defaultdict
 from jinja2 import Environment
@@ -279,7 +280,7 @@ class GalaxyCLI(CLI):
                         write_role_file_contents(f_rel_path, render_template(get_file_contents(os.path.join(root, f))))
                     else:
                         f_rel_path = os.path.relpath(os.path.join(root, f), role_skeleton)
-                        write_role_file_contents(f_rel_path, get_file_contents(os.path.join(root, f)))
+                        shutil.copyfile(os.path.join(root, f), os.path.join(role_path, f_rel_path))
 
                 for d in dirs:
                     rel_path = os.path.relpath(os.path.join(root, d), role_skeleton)
