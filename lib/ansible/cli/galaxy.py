@@ -264,7 +264,7 @@ class GalaxyCLI(CLI):
         else:
             role_skeleton = os.path.expanduser(role_skeleton)
             skeleton_ignore_expressions = C.GALAXY_ROLE_SKELETON_IGNORE
-            skeleton_ignore_re = map(lambda x: re.compile(x), skeleton_ignore_expressions)
+            skeleton_ignore_re = list(map(lambda x: re.compile(x), skeleton_ignore_expressions))
             # walk through template_path and add files/dirs
             for root, dirs, files in os.walk(role_skeleton, topdown=True):
                 rel_root = os.path.relpath(root, role_skeleton)
