@@ -299,7 +299,7 @@ GALAXY_IGNORE_CERTS            = get_config(p, 'galaxy', 'ignore_certs', 'ANSIBL
 # this can be configured to blacklist SCMS but cannot add new ones unless the code is also updated
 GALAXY_SCMS                    = get_config(p, 'galaxy', 'scms', 'ANSIBLE_GALAXY_SCMS', 'git, hg', islist=True)
 GALAXY_ROLE_SKELETON = get_config(p, 'galaxy', 'role_skeleton', 'ANSIBLE_GALAXY_ROLE_SKELETON', None, ispath=True, expand_relative_paths=True)
-GALAXY_ROLE_SKELETON_IGNORE = get_config(p, 'galaxy', 'role_skeleton_ignore', 'ANSIBLE_GALAXY_ROLE_TEMPLATE_IGNORE', ['^.git$', '^.git_keep$'], islist=True)
+GALAXY_ROLE_SKELETON_IGNORE = get_config(p, 'galaxy', 'role_skeleton_ignore', 'ANSIBLE_GALAXY_ROLE_TEMPLATE_IGNORE', ['^.git$', '^.*/.git_keep$'], islist=True)
 GALAXY_INIT_VARS_FILE = get_config(p, 'galaxy', 'init_vars_file', 'ANSIBLE_GALAXY_INIT_VARS_FILE', None, ispath=True, expand_relative_paths=True)
 GALAXY_AUTHOR = get_config(p, 'galaxy', 'author', 'ANSIBLE_GALAXY_AUTHOR', 'your name')
 

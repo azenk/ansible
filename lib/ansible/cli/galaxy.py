@@ -269,11 +269,11 @@ class GalaxyCLI(CLI):
             for root, dirs, files in os.walk(role_skeleton, topdown=True):
                 rel_root = os.path.relpath(root, role_skeleton)
                 in_templates_dir = rel_root.split(os.sep, 1)[0] == 'templates'
-                dirs[:] = filter(lambda d: not any(map(lambda r: r.match(d), skeleton_ignore_re)), dirs)
+                dirs[:] = filter(lambda d: not any(map(lambda r: r.match(os.path.join(rel_root, d)), skeleton_ignore_re)), dirs)
 
                 for f in files:
                     filename, ext = os.path.splitext(f)
-                    if any(map(lambda r: r.match(f), skeleton_ignore_re)):
+                    if any(map(lambda r: r.match(os.path.join(rel_root, f)), skeleton_ignore_re)):
                         continue
                     elif ext == ".j2" and not in_templates_dir:
                         f_rel_path = os.path.relpath(os.path.join(root, filename), role_skeleton)
