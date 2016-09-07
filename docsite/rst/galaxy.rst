@@ -200,6 +200,19 @@ The above will create the following directory structure in the current working d
 
 If a directory matching the name of the role already exists in the current working directory, the init command will result in an error. To ignore the error use the --force option. Force will create the above subdirectories and files, replacing anything that matches.
 
+Building Role Scaffolding Using a Custom Role Skeleton
+------------------------------------------------------
+
+A custom role skeleton directory can be supplied as follows:
+
+    $ ansible-galaxy init --role-skeleton=/path/to/skeleton role_name
+
+When a skeleton is provided, init will:
+- copy all files and directories from the skeleton to the new role
+- any .j2 files found outside of a templates folder will be rendered as templates. The only useful variable at the moment is role_name
+- The .git folder and any .git_keep files will not be copied
+
+
 Search for Roles
 ----------------
 
