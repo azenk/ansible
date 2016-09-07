@@ -283,7 +283,7 @@ class ValidRoleTests(object):
         for d in need_main_ymls:
             main_yml = os.path.join(self.role_dir, d, 'main.yml')
             self.assertTrue(os.path.exists(main_yml))
-            expected_string = "---\n# {0} file for {1}\n".format(d, self.role_name)
+            expected_string = "---\n# {0} file for {1}".format(d, self.role_name)
             with open(main_yml, 'r') as f:
                 self.assertEqual(expected_string, f.read())
 
@@ -294,7 +294,20 @@ class ValidRoleTests(object):
     def test_travis_yml(self):
         with open(os.path.join(self.role_dir,'.travis.yml'), 'r') as f:
             contents = f.read()
-        self.assertEqual(self.gc.galaxy.default_travis, contents, msg='.travis.yml does not match expected')
+
+        with open(os.path.join(self.role_skeleton_path, '.travis.yml'), 'r') as f:
+            expected_contents = f.read()
+
+        self.assertEqual(expected_contents, contents, msg='.travis.yml does not match expected')
+
+    def test_readme_contents(self):
+        with open(os.path.join(self.role_dir, 'README.md'), 'r') as readme:
+            contents = readme.read()
+
+        with open(os.path.join(self.role_skeleton_path, 'README.md'), 'r') as f:
+            expected_contents = f.read()
+
+        self.assertEqual(expected_contents, contents, msg='README.md does not match expected')
 
     def test_test_yml(self):
         with open(os.path.join(self.role_dir, 'tests', 'test.yml'), 'r') as f:
@@ -325,6 +338,8 @@ class TestGalaxyInitDefault(unittest.TestCase, ValidRoleTests):
         gc.run()
         cls.gc = gc
 
+        cls.role_skeleton_path = gc.galaxy.default_role_skeleton_path
+
     @classmethod
     def tearDownClass(cls):
         if os.path.isdir(cls.test_dir):
@@ -335,17 +350,12 @@ class TestGalaxyInitDefault(unittest.TestCase, ValidRoleTests):
             metadata = yaml.safe_load(mf)
         self.assertEqual(metadata.get('galaxy_info', dict()).get('author'), 'your name', msg='author was not set properly in metadata')
 
-    def test_readme_contents(self):
-        with open(os.path.join(self.role_dir, 'README.md'), 'r') as readme:
-            contents = readme.read()
-        self.assertEqual(self.gc.galaxy.default_readme, contents, msg='README.md does not match expected')
-
 
 class TestGalaxyInitSkeleton(unittest.TestCase, ValidRoleTests):
 
     @classmethod
     def setUpClass(cls):
-        cls.skeleton_path = os.path.join(os.path.split(__file__)[0], 'test_data', 'role_skeleton')
+        cls.role_skeleton_path = os.path.join(os.path.split(__file__)[0], 'test_data', 'role_skeleton')
         # Make temp directory for testing
         cls.test_dir = tempfile.mkdtemp()
         if not os.path.isdir(cls.test_dir):
@@ -356,7 +366,7 @@ class TestGalaxyInitSkeleton(unittest.TestCase, ValidRoleTests):
 
         # create role using default skeleton
         gc = GalaxyCLI(args=["init"])
-        with patch('sys.argv', ["-c", "--offline", "--role-skeleton", cls.skeleton_path, '-p', cls.test_dir, cls.role_name]):
+        with patch('sys.argv', ["-c", "--offline", "--role-skeleton", cls.role_skeleton_path, '-p', cls.test_dir, cls.role_name]):
             gc.parse()
         gc.run()
         cls.gc = gc
@@ -391,4 +401,4 @@ class TestGalaxyInitSkeleton(unittest.TestCase, ValidRoleTests):
         self.assertTrue(os.path.exists(os.path.join(self.role_dir, 'templates_extra', 'templates.txt')))
 
     def test_skeleton_option(self):
-        self.assertEquals(self.skeleton_path, self.gc.get_opt('role_skeleton'), msg='Skeleton path was not parsed properly from the command line')
+        self.assertEquals(self.role_skeleton_path, self.gc.get_opt('role_skeleton'), msg='Skeleton path was not parsed properly from the command line')

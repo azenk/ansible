@@ -236,45 +236,35 @@ class GalaxyCLI(CLI):
         if not os.path.exists(role_path):
             os.makedirs(role_path)
 
-        if role_skeleton is None:
+        if role_skeleton is None and C.GALAXY_ROLE_SKELETON is not None:
             role_skeleton = C.GALAXY_ROLE_SKELETON
-
-        if role_skeleton is None:
-            role_dirs = GalaxyRole.ROLE_DIRS
-            for d in role_dirs:
-                make_role_dir(d)
-
-            write_role_file_contents("README.md", self.galaxy.default_readme)
-            write_role_file_contents(".travis.yml", render_template(self.galaxy.default_travis))
-            write_role_file_contents("inventory", 'localhost')
-            write_role_file_contents(os.path.join("meta", "main.yml"), render_template(self.galaxy.default_meta))
-            write_role_file_contents(os.path.join("tests", "test.yml"), render_template(self.galaxy.default_test))
-            for d in set(role_dirs) - set(['meta', 'tests', 'files', 'templates']):
-                write_role_file_contents(os.path.join(d, "main.yml"), '---\n# %s file for %s\n' % (d, role_name))
-        else:
-            role_skeleton = os.path.expanduser(role_skeleton)
             skeleton_ignore_expressions = C.GALAXY_ROLE_SKELETON_IGNORE
-            skeleton_ignore_re = list(map(lambda x: re.compile(x), skeleton_ignore_expressions))
-            # walk through template_path and add files/dirs
-            for root, dirs, files in os.walk(role_skeleton, topdown=True):
-                rel_root = os.path.relpath(root, role_skeleton)
-                in_templates_dir = rel_root.split(os.sep, 1)[0] == 'templates'
-                dirs[:] = filter(lambda d: not any(map(lambda r: r.match(os.path.join(rel_root, d)), skeleton_ignore_re)), dirs)
+        else:
+            role_skeleton = self.galaxy.default_role_skeleton_path
+            skeleton_ignore_expressions = ['^.*/.git_keep$']
 
-                for f in files:
-                    filename, ext = os.path.splitext(f)
-                    if any(map(lambda r: r.match(os.path.join(rel_root, f)), skeleton_ignore_re)):
-                        continue
-                    elif ext == ".j2" and not in_templates_dir:
-                        f_rel_path = os.path.relpath(os.path.join(root, filename), role_skeleton)
-                        write_role_file_contents(f_rel_path, render_template(get_file_contents(os.path.join(root, f))))
-                    else:
-                        f_rel_path = os.path.relpath(os.path.join(root, f), role_skeleton)
-                        shutil.copyfile(os.path.join(root, f), os.path.join(role_path, f_rel_path))
+        role_skeleton = os.path.expanduser(role_skeleton)
+        skeleton_ignore_re = list(map(lambda x: re.compile(x), skeleton_ignore_expressions))
+        # walk through template_path and add files/dirs
+        for root, dirs, files in os.walk(role_skeleton, topdown=True):
+            rel_root = os.path.relpath(root, role_skeleton)
+            in_templates_dir = rel_root.split(os.sep, 1)[0] == 'templates'
+            dirs[:] = filter(lambda d: not any(map(lambda r: r.match(os.path.join(rel_root, d)), skeleton_ignore_re)), dirs)
 
-                for d in dirs:
-                    rel_path = os.path.relpath(os.path.join(root, d), role_skeleton)
-                    make_role_dir(rel_path)
+            for f in files:
+                filename, ext = os.path.splitext(f)
+                if any(map(lambda r: r.match(os.path.join(rel_root, f)), skeleton_ignore_re)):
+                    continue
+                elif ext == ".j2" and not in_templates_dir:
+                    f_rel_path = os.path.relpath(os.path.join(root, filename), role_skeleton)
+                    write_role_file_contents(f_rel_path, render_template(get_file_contents(os.path.join(root, f))))
+                else:
+                    f_rel_path = os.path.relpath(os.path.join(root, f), role_skeleton)
+                    shutil.copyfile(os.path.join(root, f), os.path.join(role_path, f_rel_path))
+
+            for d in dirs:
+                rel_path = os.path.relpath(os.path.join(root, d), role_skeleton)
+                make_role_dir(rel_path)
 
         display.display("- %s was created successfully" % role_name)
 
