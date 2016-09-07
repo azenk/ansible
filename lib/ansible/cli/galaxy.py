@@ -215,16 +215,6 @@ class GalaxyCLI(CLI):
             platforms=platform_groups,
         )
 
-        init_vars_file = C.GALAXY_INIT_VARS_FILE
-        if init_vars_file:
-            with open(init_vars_file, 'r') as f:
-                vars_from_file = yaml.safe_load(f)
-            inject_data.update(vars_from_file)
-
-        author = C.GALAXY_AUTHOR
-        if author is not None:
-            inject_data['author'] = author
-
         def get_file_contents(file_path):
             with open(file_path, 'r') as t:
                 contents = t.read()
