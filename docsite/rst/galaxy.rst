@@ -205,9 +205,12 @@ Using a Custom Role Skeleton
 
 A custom role skeleton directory can be supplied as follows:
 
+::
+
    $ ansible-galaxy init --role-skeleton=/path/to/skeleton role_name
 
 When a skeleton is provided, init will:
+
 - copy all files and directories from the skeleton to the new role
 - any .j2 files found outside of a templates folder will be rendered as templates. The only useful variable at the moment is role_name
 - The .git folder and any .git_keep files will not be copied
