@@ -247,8 +247,6 @@ class GalaxyCLI(CLI):
         # walk through template_path and add files/dirs
         for root, dirs, files in os.walk(role_skeleton, topdown=True):
             rel_root = os.path.relpath(root, role_skeleton)
-            with open('/tmp/rel_roots', 'a') as f:
-                f.write("{0}\n".format(rel_root))
             in_templates_dir = rel_root.split(os.sep, 1)[0] == 'templates'
             dirs[:] = filter(lambda d: not any(map(lambda r: r.match(os.path.join(rel_root, d)), skeleton_ignore_re)), dirs)
 
