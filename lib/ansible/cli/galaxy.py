@@ -215,11 +215,6 @@ class GalaxyCLI(CLI):
             platforms=platform_groups,
         )
 
-        def make_role_dir(relative_path):
-            dir_path = os.path.join(init_path, role_name, relative_path)
-            if not os.path.exists(dir_path):
-                os.makedirs(dir_path)
-
         # create role directory
         if not os.path.exists(role_path):
             os.makedirs(role_path)
@@ -253,8 +248,9 @@ class GalaxyCLI(CLI):
                     shutil.copyfile(os.path.join(root, f), os.path.join(role_path, f_rel_path))
 
             for d in dirs:
-                rel_path = os.path.relpath(os.path.join(root, d), role_skeleton)
-                make_role_dir(rel_path)
+                dir_path = os.path.join(role_path, rel_root, d)
+                if not os.path.exists(dir_path):
+                    os.makedirs(dir_path)
 
         display.display("- %s was created successfully" % role_name)
 
