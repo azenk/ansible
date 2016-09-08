@@ -30,7 +30,7 @@ import re
 import shutil
 
 from collections import defaultdict
-from jinja2 import Environment
+from jinja2 import Environment, FileSystemLoader
 
 import ansible.constants as C
 from ansible.cli import CLI
@@ -215,18 +215,6 @@ class GalaxyCLI(CLI):
             platforms=platform_groups,
         )
 
-        def get_file_contents(file_path):
-            with open(file_path, 'r') as t:
-                contents = t.read()
-            return contents
-
-        def render_template(template_string):
-            return Environment().from_string(template_string).render(inject_data)
-
-        def write_role_file_contents(relative_file_path, contents):
-            with open(os.path.join(role_path, relative_file_path), 'w') as f:
-                f.write(contents)
-
         def make_role_dir(relative_path):
             dir_path = os.path.join(init_path, role_name, relative_path)
             if not os.path.exists(dir_path):
@@ -244,7 +232,9 @@ class GalaxyCLI(CLI):
 
         role_skeleton = os.path.expanduser(role_skeleton)
         skeleton_ignore_re = list(map(lambda x: re.compile(x), skeleton_ignore_expressions))
-        # walk through template_path and add files/dirs
+
+        template_env = Environment(loader=FileSystemLoader(role_skeleton))
+
         for root, dirs, files in os.walk(role_skeleton, topdown=True):
             rel_root = os.path.relpath(root, role_skeleton)
             in_templates_dir = rel_root.split(os.sep, 1)[0] == 'templates'
@@ -255,8 +245,9 @@ class GalaxyCLI(CLI):
                 if any(map(lambda r: r.match(os.path.join(rel_root, f)), skeleton_ignore_re)):
                     continue
                 elif ext == ".j2" and not in_templates_dir:
-                    f_rel_path = os.path.relpath(os.path.join(root, filename), role_skeleton)
-                    write_role_file_contents(f_rel_path, render_template(get_file_contents(os.path.join(root, f))))
+                    src_template = os.path.join(rel_root, f)
+                    dest_file = os.path.join(role_path, rel_root, filename) 
+                    template_env.get_template(src_template).stream(inject_data).dump(dest_file)
                 else:
                     f_rel_path = os.path.relpath(os.path.join(root, f), role_skeleton)
                     shutil.copyfile(os.path.join(root, f), os.path.join(role_path, f_rel_path))
