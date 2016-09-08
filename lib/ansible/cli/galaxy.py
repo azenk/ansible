@@ -177,7 +177,7 @@ class GalaxyCLI(CLI):
         init_path  = self.get_opt('init_path', './')
         force      = self.get_opt('force', False)
         offline    = self.get_opt('offline', False)
-        role_skeleton = self.get_opt('role_skeleton')
+        role_skeleton = self.get_opt('role_skeleton', C.GALAXY_ROLE_SKELETON)
 
         role_name = self.args.pop(0).strip() if self.args else None
         if not role_name:
@@ -236,8 +236,7 @@ class GalaxyCLI(CLI):
         if not os.path.exists(role_path):
             os.makedirs(role_path)
 
-        if role_skeleton is None and C.GALAXY_ROLE_SKELETON is not None:
-            role_skeleton = C.GALAXY_ROLE_SKELETON
+        if role_skeleton is not None:
             skeleton_ignore_expressions = C.GALAXY_ROLE_SKELETON_IGNORE
         else:
             role_skeleton = self.galaxy.default_role_skeleton_path
@@ -248,6 +247,8 @@ class GalaxyCLI(CLI):
         # walk through template_path and add files/dirs
         for root, dirs, files in os.walk(role_skeleton, topdown=True):
             rel_root = os.path.relpath(root, role_skeleton)
+            with open('/tmp/rel_roots', 'a') as f:
+                f.write("{0}\n".format(rel_root))
             in_templates_dir = rel_root.split(os.sep, 1)[0] == 'templates'
             dirs[:] = filter(lambda d: not any(map(lambda r: r.match(os.path.join(rel_root, d)), skeleton_ignore_re)), dirs)
 
