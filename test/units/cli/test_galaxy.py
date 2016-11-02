@@ -401,7 +401,7 @@ class TestGalaxyInitSkeleton(unittest.TestCase, ValidRoleTests):
         with open(test_conf_j2, 'r') as f:
             contents = f.read()
         expected_contents = '[defaults]\ntest_key = {{ test_variable }}'
-        self.assertEqual(expected_contents, contents, msg="test.conf.j2 doesn't contain what it should, is it being rendered?")
+        self.assertEqual(expected_contents, contents.strip(), msg="test.conf.j2 doesn't contain what it should, is it being rendered?")
 
     def test_template_ignore_jinja_subfolder(self):
         test_conf_j2 = os.path.join(self.role_dir, 'templates', 'subfolder', 'test.conf.j2')
@@ -409,7 +409,7 @@ class TestGalaxyInitSkeleton(unittest.TestCase, ValidRoleTests):
         with open(test_conf_j2, 'r') as f:
             contents = f.read()
         expected_contents = '[defaults]\ntest_key = {{ test_variable }}'
-        self.assertEqual(expected_contents, contents, msg="test.conf.j2 doesn't contain what it should, is it being rendered?")
+        self.assertEqual(expected_contents, contents.strip(), msg="test.conf.j2 doesn't contain what it should, is it being rendered?")
 
     def test_template_ignore_similar_folder(self):
         self.assertTrue(os.path.exists(os.path.join(self.role_dir, 'templates_extra', 'templates.txt')))
