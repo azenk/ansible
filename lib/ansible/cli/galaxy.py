@@ -219,6 +219,16 @@ class GalaxyCLI(CLI):
             container_enabled=self.options.container_enabled
         )
 
+        init_vars_file = C.GALAXY_INIT_VARS_FILE
+        if init_vars_file:
+            with open(init_vars_file, 'r') as f:
+                vars_from_file = yaml.safe_load(f)
+            inject_data.update(vars_from_file)
+
+        author = C.GALAXY_AUTHOR
+        if author is not None:
+            inject_data['author'] = author
+
         # create role directory
         if not os.path.exists(role_path):
             os.makedirs(role_path)

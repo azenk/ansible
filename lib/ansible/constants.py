@@ -324,6 +324,8 @@ GALAXY_IGNORE_CERTS            = get_config(p, 'galaxy', 'ignore_certs', 'ANSIBL
 GALAXY_SCMS                    = get_config(p, 'galaxy', 'scms', 'ANSIBLE_GALAXY_SCMS', 'git, hg', value_type='list')
 GALAXY_ROLE_SKELETON = get_config(p, 'galaxy', 'role_skeleton', 'ANSIBLE_GALAXY_ROLE_SKELETON', None, value_type='path')
 GALAXY_ROLE_SKELETON_IGNORE = get_config(p, 'galaxy', 'role_skeleton_ignore', 'ANSIBLE_GALAXY_ROLE_SKELETON_IGNORE', ['^.git$', '^.*/.git_keep$'], value_type='list')
+GALAXY_INIT_VARS_FILE          = get_config(p, 'galaxy', 'init_vars_file', 'ANSIBLE_GALAXY_INIT_VARS_FILE', None, value_type='path')
+GALAXY_AUTHOR                  = get_config(p, 'galaxy', 'author', 'ANSIBLE_GALAXY_AUTHOR', 'your name')
 
 STRING_TYPE_FILTERS = get_config(p, 'jinja2', 'dont_type_filters', 'ANSIBLE_STRING_TYPE_FILTERS', ['string', 'to_json', 'to_nice_json', 'to_yaml', 'ppretty', 'json'], value_type='list' )
 
