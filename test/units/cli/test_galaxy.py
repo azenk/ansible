@@ -430,7 +430,7 @@ class TestGalaxyInitVarsFile(unittest.TestCase, ValidRoleTests):
 
         role_skeleton_path = os.path.join(os.path.split(__file__)[0], 'test_data', 'role_skeleton')
         with patch.object(ansible.constants, 'GALAXY_INIT_VARS_FILE', init_vars_file):
-            cls.setUpRole('delete_me_skeleton', skeleton_path=role_skeleton_path)
+            cls.setUpRole('delete_me_init_vars_test', skeleton_path=role_skeleton_path)
 
     @classmethod
     def tearDownClass(cls):
@@ -442,4 +442,17 @@ class TestGalaxyInitVarsFile(unittest.TestCase, ValidRoleTests):
         with open(os.path.join(self.role_dir, 'meta', 'main.yml'), 'r') as mf:
             metadata = yaml.safe_load(mf)
         self.assertEqual(metadata.get('galaxy_info', dict()).get('company'), 'test company', msg='The company was not read properly from the init_vars_file')
-        
+
+
+class TestGalaxyAuthorConfig(unittest.TestCase, ValidRoleTests):
+
+    @classmethod
+    def setUpClass(cls):
+        role_skeleton_path = os.path.join(os.path.split(__file__)[0], 'test_data', 'role_skeleton')
+        with patch.object(ansible.constants, 'GALAXY_AUTHOR', 'Test Author <author@example.com>'):
+            cls.setUpRole('delete_me_author_test', skeleton_path=role_skeleton_path)
+
+    def test_injected_author(self):
+        with open(os.path.join(self.role_dir, 'meta', 'main.yml'), 'r') as mf:
+            metadata = yaml.safe_load(mf)
+        self.assertEqual(metadata.get('galaxy_info', dict()).get('author'), 'Test Author <author@example.com>', msg='The author was not read properly from the config file')
