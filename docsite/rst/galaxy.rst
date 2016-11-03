@@ -211,6 +211,36 @@ If you are creating a Container Enabled role, use the *--container-enabled* opti
 with default files appropriate for a Container Enabled role. For instance, the README.md has a slightly different structure, the *.travis.yml* file tests
 the role using [Ansible Container](https://github.com/ansible/ansible-container), and the meta directory includes a *container.yml* file.
 
+Setting Role Template Variables
+===============================
+
+You can set custom values for the variables that are injected into the role skeleton templates in two ways.
+
+Init vars file
+``````````````
+Creating a yaml file that sets the values you care about, and setting that path in ansible.cfg.  
+
+::
+  
+  [galaxy]
+  init_vars_file = /path/to/init_vars.yml
+
+Alternatively the init vars file path can be set in the 'ANSIBLE_GALAXY_INIT_VARS_FILE' environment variable.
+
+
+Author
+``````
+
+The author variable can be configured separately from the remaining variables.  This can be done via either ansible.cfg or the ANSIBLE_GALAXY_AUTHOR environment variable.
+
+::
+
+  [galaxy]
+  author = 'Example Author'
+
+
+
+
 Using a Custom Role Skeleton
 ============================
 
