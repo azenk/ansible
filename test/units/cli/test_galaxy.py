@@ -416,3 +416,30 @@ class TestGalaxyInitSkeleton(unittest.TestCase, ValidRoleTests):
 
     def test_skeleton_option(self):
         self.assertEquals(self.role_skeleton_path, self.gc.get_opt('role_skeleton'), msg='Skeleton path was not parsed properly from the command line')
+
+
+class TestGalaxyInitVarsFile(unittest.TestCase, ValidRoleTests):
+
+    @classmethod
+    def setUpClass(cls):
+        cls.init_vars_path = tempfile.mkdtemp()
+        init_vars_file = os.path.join(cls.init_vars_path, 'init_vars.yml')
+        init_vars = {'company': 'test company'}
+        with open(init_vars_file,'w') as f:
+            yaml.dump(init_vars, f)
+
+        role_skeleton_path = os.path.join(os.path.split(__file__)[0], 'test_data', 'role_skeleton')
+        with patch.object(ansible.constants, 'GALAXY_INIT_VARS_FILE', init_vars_file):
+            cls.setUpRole('delete_me_skeleton', skeleton_path=role_skeleton_path)
+
+    @classmethod
+    def tearDownClass(cls):
+        if os.path.isdir(cls.init_vars_path):
+            shutil.rmtree(cls.init_vars_path)
+        super(TestGalaxyInitVarsFile, cls).tearDownClass()
+        
+    def test_injected_variable_company(self):
+        with open(os.path.join(self.role_dir, 'meta', 'main.yml'), 'r') as mf:
+            metadata = yaml.safe_load(mf)
+        self.assertEqual(metadata.get('galaxy_info', dict()).get('company'), 'test company', msg='The company was not read properly from the init_vars_file')
+        
